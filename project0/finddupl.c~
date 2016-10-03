@@ -23,7 +23,8 @@ int main(int argc, char *argv[]) {
 		}
 	} else
 		fd = stdin;
-		
+	me_get(fd);
+	/*	
 	ml = ml_create();
 	while ((mep = me_get(fd)) != NULL) {
 		meq = ml_lookup(ml, mep);
@@ -42,5 +43,5 @@ int main(int argc, char *argv[]) {
 	ml_destroy(ml);
 	if (fd != stdin)
 		fclose(fd);
-	return 0;
+	*/return 0;
 }
