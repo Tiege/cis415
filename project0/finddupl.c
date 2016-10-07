@@ -23,12 +23,15 @@ int main(int argc, char *argv[]) {
 		}
 	} else
 		fd = stdin;
-		
+	
 	ml = ml_create();
+	
 	while ((mep = me_get(fd)) != NULL) {
+		//printf("%s\n", mep->full_address);	
 		meq = ml_lookup(ml, mep);
-		if (meq == NULL)
+		if (meq == NULL) {
 			(void) ml_add(&ml, mep);
+		}
 		else {
 			printf("Potential duplicate\n");
 			printf("===================\n");

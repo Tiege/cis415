@@ -30,7 +30,7 @@ int ml_add(MList **ml, MEntry *me) {
 	
 	MList *p;
 	MListNode *q;
-	//printf("added\n");
+	printf("added\n");
 	p = *ml;
 	if (ml_lookup(p, me) != NULL)
 		return 1;

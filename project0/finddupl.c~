@@ -23,13 +23,15 @@ int main(int argc, char *argv[]) {
 		}
 	} else
 		fd = stdin;
-	me_get(fd);
-	/*	
+	
 	ml = ml_create();
+	
 	while ((mep = me_get(fd)) != NULL) {
+		//printf("%s\n", mep->full_address);	
 		meq = ml_lookup(ml, mep);
-		if (meq == NULL)
+		if (meq == NULL) {
 			(void) ml_add(&ml, mep);
+		}
 		else {
 			printf("Potential duplicate\n");
 			printf("===================\n");
@@ -37,11 +39,13 @@ int main(int argc, char *argv[]) {
 			printf("==========\n");
 			me_print(meq, stdout);
 			printf("\n");
+			printf("before destroy\n");
 			me_destroy(mep);
 		}
 	}
+	printf("%s\n", "HERE?");
 	ml_destroy(ml);
 	if (fd != stdin)
 		fclose(fd);
-	*/return 0;
+	return 0;
 }
