@@ -10,7 +10,6 @@ typedef struct mentry {
 	int house_number;
  	char *zipcode;
 	char *full_address;
-	int j;
 } MEntry;
 
 /* me_get returns the next file entry, or NULL if end of file */

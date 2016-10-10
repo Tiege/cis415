@@ -26,11 +26,11 @@ int main(int argc, char *argv[]) {
 	
 	ml = ml_create();
 	
-	while ((mep = me_get(fd)) != NULL) {
-		//printf("%s\n", mep->full_address);	
+	while ((mep = me_get(fd)) != NULL) {	
 		meq = ml_lookup(ml, mep);
 		if (meq == NULL) {
 			(void) ml_add(&ml, mep);
+			printf("AFTER\n");
 		}
 		else {
 			printf("Potential duplicate\n");
@@ -39,11 +39,10 @@ int main(int argc, char *argv[]) {
 			printf("==========\n");
 			me_print(meq, stdout);
 			printf("\n");
-			printf("before destroy\n");
 			me_destroy(mep);
 		}
 	}
-	printf("%s\n", "HERE?");
+	printf("HERE?\n");
 	ml_destroy(ml);
 	if (fd != stdin)
 		fclose(fd);

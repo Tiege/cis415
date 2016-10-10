@@ -11,7 +11,6 @@ MEntry *me_get(FILE *fd){
 
 	//allocate space for a new mail entry
 	entry = (MEntry *) malloc(sizeof(MEntry));
-
 	if (entry == NULL)
 		return NULL;
 
@@ -21,33 +20,35 @@ MEntry *me_get(FILE *fd){
 		return NULL;
 	}
 
+	//Allocating space for pointer variables
 	entry->full_address = (char *) malloc(350);
-	
 	entry->surname = (char *) malloc(400);
+	entry->zipcode = (char *) malloc(500);
 		
+	//Add first line to full_address and first word to surname
 	strncpy(entry->full_address, string, 350);
 	strncpy(entry->surname, strtok(string, ","), 400);
 
-	
+	//Reads second line of entry, adds to full_address
+	//strips number for house_number
 	if(fgets(string2, sizeof(string2), fd) == NULL)
 		return NULL;;
 	strcat(entry->full_address, string2);
 	sscanf(string2, "%d", &entry->house_number);
 
 	//if no house number set to 0
-	if (entry->house_number == NULL)
+	if (entry->house_number == '\0')
 		entry->house_number = 0;
 
-	entry->zipcode = (char *) malloc(500);
-
+	//Read third line of mail entry, add to full_address
 	if(fgets(string3, sizeof(string3), fd) == NULL)
 		return NULL;
 	strcat(entry->full_address, string3);
 
+	//strip digits for zipcode, remove trailing '\n'
 	char * zip;
 	char * num = "0123456789";
 	zip = strpbrk(string3, num);
-	
 	strncpy(entry->zipcode, zip, 500);
 	entry->zipcode = strtok(entry->zipcode, "\n");
 
@@ -56,7 +57,21 @@ MEntry *me_get(FILE *fd){
 }
 
 /* me_hash computes a hash of the MEntry, mod size */
-unsigned long me_hash(MEntry *me, unsigned long size);
+unsigned long me_hash(MEntry *me, unsigned long size) {
+
+	char * t;
+	t = strdup(me->surname);; //must use free(t) somewhere...
+	free(t);
+
+	unsigned long hash;
+	for (hash = 0; *t != '\0'; t++) {
+		hash += (int)*t + 31 * hash;		
+	}
+
+	hash += me->house_number;
+	hash += atoi(me->zipcode);
+	return hash % size;
+}
 
 /*me_print prints the full address on fd */
 void me_print(MEntry *me, FILE *fd) {
