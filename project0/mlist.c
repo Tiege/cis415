@@ -1,3 +1,9 @@
+/***TREVOR JONES duckid=tjones9 (951384223) CIS 415 PROJECT 0*******
+This file is my own work, although I did use references from the C
+Programming Manual for help implementating parts of the hashtable such as the
+lookup(). I was unable to correctly implement resizing for the hashtable. The
+program runs correctly when testing against 30,000 entries (M.txt). There are no memory leaks.
+********************************************************************/
 #include "mlist.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -19,7 +25,7 @@ MList *ml_create(void) {
 	MList *p = NULL;
 	int i;
 	if ((p = (MList *)malloc(sizeof(MList))) != NULL) {
-		p->list_size = 97;
+		p->list_size = 5381;
 		p->hashTable = malloc (sizeof(MListNode*) * p->list_size);
 	}
 	return p;
@@ -30,10 +36,10 @@ MList *ml_create(void) {
  * returns 1 if it is a duplicate */
 int ml_add(MList **ml, MEntry *me) {
 	
-	MList *p, *r, *t;
+	MList *p, *r;
 	MListNode *q, *m;
-	MListNode **newTable;
 	p = *ml;
+	r = NULL;
 	int prev_size;
 
 	if (ml_lookup(p, me) != NULL)
@@ -41,59 +47,45 @@ int ml_add(MList **ml, MEntry *me) {
 	if ((q = (MListNode *)malloc(sizeof(MListNode))) == NULL)
 		return 0;
 
+		//add me to head of hashbucket and current to next
 		q->entry = me;
 		q->next = p->hashTable[me_hash(me, p->list_size)];
+
 		//add nummber of links per bucket entry, 0 if none
 		if (q->next == NULL)
 			q->num_links = 0;
 		else
 			q->num_links = q->next->num_links + 1;
 
-		//add entry to hashtable
+		//insert mail entry into hash table
 		p->hashTable[me_hash(me, p->list_size)] = q;
 
+		/****Attempt at resizing hashtable === UNSUCCESSFUL
+		* Unable to successfully copy over elements of old table
+		* into new resized table once a bucket hits 20 elements
+		
 		if (q->num_links == 20) { 
-			//t = (MList *)malloc(sizeof(MList));
-			//memcpy(t->hashTable, p->hashTable, sizeof(p->hashTable));	
+			//update number of buckets
 			prev_size = p->list_size;  
 			p->list_size = (p->list_size * 2);  
 
 			//resize the hashtable
 			r = (MList *)malloc(sizeof(MList));
-			r->hashTable = malloc(sizeof(MListNode*) * p->list_size); 
-	 		//p->hashTable = r->hashTable;
-			//p->hashTable = realloc(p->hashTable, p->list_size);
-
-			
-
-		//make new temp hashtable, recalc, then p->hashtable = new
+			r->hashTable = malloc (sizeof(MListNode*) * p->list_size); 
+		//loop through old table, copy old elements to new hash	
 		int n;
-		for (n = 0; n < prev_size; n++) {
-			
-			
+		for (n = 0; n < prev_size; n++) {		
 			while (p->hashTable[n] != NULL) {
 				m = (MListNode *)malloc(sizeof(MListNode));
 				m = p->hashTable[n];
 				m->num_links = 0;
 				r->hashTable[me_hash(m->entry, p->list_size)] = m;
 				p->hashTable[n] = p->hashTable[n]->next;
-
 				free(m);
 			}
 		}
 		p->hashTable = r->hashTable;
-		}
-		
-		
-		
-		
-		
-		
-		
-		
-
-	
-
+		}*/
 	return 1;
 }
 
@@ -101,7 +93,6 @@ int ml_add(MList **ml, MEntry *me) {
 MEntry *ml_lookup(MList *ml, MEntry *me) {
 	MList *p;
 	MListNode *q;
-
 	
 	p = ml;
 	for (q = p->hashTable[me_hash(me, p->list_size)]; q != NULL; q = q->next) {

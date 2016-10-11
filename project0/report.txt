@@ -1,0 +1,8 @@
+Trevor Jones -- duckid = tjones9 -- CIS 415 -- Project 0
+
+mentry.c: works successfully as expected. First implemented linking to
+the provided mlistLL.c file and integrated correctly with no memory leaks. The most difficult part was copying elements from the file stream and parsing them to return correct mail entry pointers. Once I had my free()'s lined up with my alloc's I was set to move onto turning mlistLL into a hashtable.
+
+mlist.c: works correctly minus table resizing. When executing ./finddupl M.txt the program outputs correctly with no memory leaks. I was unable to figure out how to copy the entries already in the MList to a new resized hashtable and then set the MList to the new table, eventhough I was able to increase the size of the table and indicate when a bucket hit 20 entries. No memory leaks.
+
+This project was a great lesson in the power of efficient ADT's! It really clicked when I was able to successfully run my hashtable structure through the list and it compiled the duplicate list nearly 5x as fast as the linked list version. Unfortunately I was not able to add a prime number increasing scheme for the hashtable resizing so that it could run the 1 mil and 10 mil entry lists.

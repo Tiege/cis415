@@ -10,6 +10,6 @@ finddupl: finddupl.o mentry.o mlist.o
 
 finddupl.o: finddupl.c mentry.h mlist.h
 mentry.o: mentry.h mentry.c
-mlist.o: mlistLLcopy.c mlist.h mentry.h
-	gcc -c mlistLLcopy.c
-	mv mlistLLcopy.o mlist.o
+mlist.o: mlist.c mlist.h mentry.h
+	gcc -c mlist.c
+	mv mlist.o

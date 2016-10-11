@@ -1,3 +1,9 @@
+/***TREVOR JONES duckid=tjones9 (951384223) CIS 415 PROJECT 0*******
+This file is my own work, although I did use references from the C
+Programming Manual for help implementating parts of the hashtable such as the
+lookup(). I was unable to correctly implement resizing for the hashtable. The
+program runs correctly when testing against 30,000 entries (M.txt). There are no memory leaks.
+********************************************************************/
 #include "mlist.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -19,7 +25,7 @@ MList *ml_create(void) {
 	MList *p = NULL;
 	int i;
 	if ((p = (MList *)malloc(sizeof(MList))) != NULL) {
-		p->list_size = 97;
+		p->list_size = 5381;
 		p->hashTable = malloc (sizeof(MListNode*) * p->list_size);
 	}
 	return p;
@@ -61,11 +67,11 @@ int ml_add(MList **ml, MEntry *me) {
 		if (q->num_links == 20) { 
 			//update number of buckets
 			prev_size = p->list_size;  
-			p->list_size = (p->list_size * 2);  }
+			p->list_size = (p->list_size * 2);  
 
 			//resize the hashtable
 			r = (MList *)malloc(sizeof(MList));
-			r->hashTable = malloc (sizeof(MListNode*) * p->list_size); }
+			r->hashTable = malloc (sizeof(MListNode*) * p->list_size); 
 		//loop through old table, copy old elements to new hash	
 		int n;
 		for (n = 0; n < prev_size; n++) {		
