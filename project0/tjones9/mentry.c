@@ -66,7 +66,7 @@ unsigned long me_hash(MEntry *me, unsigned long size) {
 
 	char * t;
 	t = strdup(me->surname);
-	free(t);//strdup returns malloced pointer, must free to avoid leak
+	free(t); //strdup returns malloced pointer, must free to avoid leak
 
 	//calculate unique hash using surname+house_number+zipcode % size
 	unsigned long hash;
@@ -75,8 +75,7 @@ unsigned long me_hash(MEntry *me, unsigned long size) {
 	}
 	hash += me->house_number;
 	hash += atoi(me->zipcode);
-	
-	printf("%d\n", hash);
+
 	return hash % size;
 }
 

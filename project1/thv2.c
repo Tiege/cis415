@@ -76,15 +76,15 @@ int main(int argc, char *argv[]) {
 		kill(pid[i], SIGUSR1);
 
 	//suspend each child process from parent process
-	for (i = 0; i < nprocesses; i++)
+	/*for (i = 0; i < nprocesses; i++)
 		kill(pid[i], SIGSTOP);
 
 	//send continue signal to each child process for them to resume
 	for (i = 0; i < nprocesses; i++)
-		kill(pid[i], SIGCONT);
+		kill(pid[i], SIGCONT);*/
 
 	//wait for each child process to terminate
-	for (i = 0; i < nprocesses - 1; i++)
+	for (i = 0; i < nprocesses; i++)
 		wait(pid[i]);
 
 	//stop timer, compute difference = elapsed time
