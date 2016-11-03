@@ -6,7 +6,7 @@
 #include "p1fxns.h"
 
 #define num_args 10
-#define INTERVAL 500
+#define INTERVAL 250 //250ms
 
 typedef struct processManager {
 	int nprocesses, nprocessors, count, index;
@@ -15,64 +15,61 @@ typedef struct processManager {
 
 static procMngr *ptrMngr;
 static pcount = 0;
-int nproc, mproc;
-pid_t procs[1024];
+
+/*Main signal handler***********************************************
+*Called when SIGALRM or SIGUSR2 signalled. Initial loop to start first processes.
+*Alternate between two loops of size 'nprocessors', one to stop, next to continue for pid[n]
+********************************************************************/
 void sig_handler(int sig) {
 
 	int i;
 	//first set of processes initiated
 	if (sig == SIGUSR2) {
 		for (i = 0; i < ptrMngr->nprocessors; i++)
-			kill(ptrMngr->pid[i], SIGCONT);
+			kill(ptrMngr->pid[i], SIGCONT); /* resume initial child processes*/
 
-	ptrMngr->index = 0;
+	//set marks
+	ptrMngr->index = 0;	
 	ptrMngr->count = ptrMngr->nprocessors;
 	}
-	
-	int ret;
+
 	//handle rest of process scheduling
 	if (sig == SIGALRM) {
 
+		//loop through nprocessor times STOP children processes 
 		for (i = 0; i < ptrMngr->nprocessors; i++) {
 
-
 			kill(ptrMngr->pid[ptrMngr->index], SIGSTOP);
-			ptrMngr->index++; 
-			printf("STOPPED\n");
-			if (ptrMngr->index == ptrMngr->nprocesses)
-				ptrMngr->index = 0;
+			ptrMngr->index++;  //increment mark
 
+			if (ptrMngr->index == ptrMngr->nprocesses) /*wrap around back to 0 index when at end*/
+				ptrMngr->index = 0;
 		}
 
+		//loop through nprocessor times CONTINUE children processes 
 		for (i = 0; i < ptrMngr->nprocessors; i++) {
 
 			kill(ptrMngr->pid[ptrMngr->count], SIGCONT);
-			ptrMngr->count++;
-			printf("CONTINUED\n");
+			ptrMngr->count++; //increment mark
 
-			if (ptrMngr->count == ptrMngr->nprocesses)
+			if (ptrMngr->count == ptrMngr->nprocesses) /*wrap around back to 0 index when at end*/
 				ptrMngr->count = 0;
 		}
-		pcount++;
-		printf("%d\n", pcount);
-		if (pcount == 10) {
-		for (i = 0; i < ptrMngr->nprocesses; i++) {
-
-			kill(ptrMngr->pid[i], SIGCONT); }
-		}	
 	}
 	
 }
+/*SIGHLD handler, called when a child terminates************
+*when child terminated detected, decriments process counter by 1
+************************************************************/
 void reap_zombies(int sig) {
 
 	pid_t proc;
 	int status;
 
-	while((proc=waitpid(-1, &status, WNOHANG)) > 0) {
-		printf("REAPED---");
-		printf("%d\n", proc);
-	}
-	//sleep(10);
+	//detect when child process terminates
+	while((proc=waitpid(-1, &status, WNOHANG)) > 0)
+		pcount--; /*reap -> decrement process counter*/
+
 }
 
 int main(int argc, char *argv[]) {
@@ -82,7 +79,7 @@ int main(int argc, char *argv[]) {
 	sigset_t sigSet;
 	struct itimerval itimer;
 
-	char *testcmd[] = { "date", NULL };
+	char *testcmd[] = { "./test", NULL };
 
 	ptrMngr = (procMngr*) malloc(sizeof(ptrMngr));
 
@@ -94,7 +91,10 @@ int main(int argc, char *argv[]) {
 	signal(SIGALRM, &sig_handler);
 	signal(SIGUSR2, &sig_handler);
 
-	//signal(SIGCHLD, &reap_zombies);
+	//set SIGCHLD for handler to reap
+	signal(SIGCHLD, &reap_zombies);
+
+
 
 	//fetch environment variables TH_NPROCESSES and TH_NPROCESSORS
 	if ((p = getenv("TH_NPROCESSES")) != NULL)
@@ -102,8 +102,13 @@ int main(int argc, char *argv[]) {
 	if ((p = getenv("TH_NPROCESSORS")) != NULL)
 		ptrMngr->nprocessors = atoi(p);
 
+	//int a;
+	//for (a = 1; a < argc; a++) {
+		//if (argv[a][0] == '-' && argv[a][--nprocesses
+
+	//}
 	//override variables with arguements if applicable
-	if (argc == 4 ) { 
+	/*if (argc == 4 ) { 
 		if (argv[1][0] == '-' && argv[1][1] == '-')
 			ptrMngr->nprocesses = atoi(&argv[1][2]);
 		if (argv[2][0] == '-' && argv[2][1] == '-')
@@ -118,14 +123,15 @@ int main(int argc, char *argv[]) {
 		printf("ERROR: invalid set of arguements\n");
 		return 0;
 	}
-
+	*/
 	/*******Add error handling for variations of input for args*******/
 
+	//alloc array of process id's
 	ptrMngr->pid = (pid_t*) malloc(sizeof(pid_t) * ptrMngr->nprocesses);
 
+	//set process count for parent process to wait
+	pcount = ptrMngr->nprocesses;
 
-
-	mproc = ptrMngr->nprocesses;
 	//child process creation loop
 	int i;
 	for (i = 0; i < ptrMngr->nprocesses; i++) {
@@ -141,9 +147,12 @@ int main(int argc, char *argv[]) {
 			}
 	} 
 
+	int q;
 	//'wake' each process then suspend all
-	for (i = 0; i < ptrMngr->nprocesses; i++) 
+	for (i = 0; i < ptrMngr->nprocesses; i++) {
+		for (q=0;q<1000000;q++) ; //pause before waking children up
 		kill(ptrMngr->pid[i], SIGUSR1);
+	}
 
 	raise(SIGUSR2); /*start first set of processes*/
 
@@ -151,7 +160,6 @@ int main(int argc, char *argv[]) {
 	gettimeofday(&start, NULL);
 
 	//setup values for interval timer, INTERVAL = 250
-	nproc = 0;
 	ptrMngr->count = 0;
 	ptrMngr->index = 0;
 	itimer.it_value.tv_sec = INTERVAL / 1000;
@@ -160,28 +168,14 @@ int main(int argc, char *argv[]) {
 	//start interval timer = 250ms
 	setitimer(ITIMER_REAL, &itimer, NULL);
 
-
-	int returnstatus;
-	//wait for each child process to terminate
-	for (i = 0; i < ptrMngr->nprocesses; i++) {
-		printf("WAITING?\n");
-		waitpid(ptrMngr->pid[i], &returnstatus, 0);
-		
-		if (returnstatus == 0) {
-			printf("REAPED---");
-			printf("%d\n", ptrMngr->pid[i]); }
-		else {
-			printf("FAILED---");
-			printf("%d\n", ptrMngr->pid[i]); }
-	}
-	//raise(SIGCHLD);
+	//parent process waits for all children to terminate and be reaped
+	while(pcount > 0)
+		;
 
 	//stop timer, compute difference = elapsed time
 	gettimeofday(&stop, NULL);
 
 	//DISPLAY OUTPUT
-	float time;
-	int itime;
 	p1putstr(1, "The elapsed time to execute ");
 	p1putint(1, ptrMngr->nprocesses);
 	p1putstr(1, " copies of ");
@@ -189,12 +183,20 @@ int main(int argc, char *argv[]) {
 	p1putstr(1, " on ");
 	p1putint(1, ptrMngr->nprocessors);
 	p1putstr(1, " processors is ");
-	time = ((stop.tv_sec * 1000000.0 + stop.tv_usec) - (start.tv_sec * 1000000.0 + start.tv_usec)) / 1000000.0; /*compute time elapsed*/
-	p1putint(1, (int)time);
+	int stime, mtime;
+	stime = (stop.tv_sec) - (start.tv_sec);
+	p1putint(1, stime);
 	p1putstr(1, ".");
-	itime = (int)(time * 1000) % ((int)time*1000); /*obtain remainder*/
-	p1putint(1, itime);
+	mtime = (stop.tv_usec - start.tv_usec) / 1000;
+	if (mtime < 0)
+		mtime *= -1;
+	p1putint(1, mtime);
 	p1putstr(1, "sec\n");
+
+	//free memory
+	free(command[0]);
+	free(ptrMngr->pid);
+	free(ptrMngr);
 
 	return 0;
 }

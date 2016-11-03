@@ -65,23 +65,27 @@ int main(int argc, char *argv[]) {
 			sigwait(&sigSet, &sig); /*suspend child proc til signal*/
 			if (sig == SIGUSR1) { /*when SIGUSR1 is received*/
 				execvp(command[0], command);
+				printf("ERROR\n");
 			}
 		}
 	} 
 	//start timer
 	gettimeofday(&start, NULL);
-
+	int q;
 	//send signal SIGUSR1 to each child process to 'wake' them up
-	for (i = 0; i < nprocesses; i++)
-		kill(pid[i], SIGUSR1);
+	for (i = 0; i < nprocesses; i++) {
+		for (q=0;q<1000000;q++) ; //pause before waking children up
+		
+		kill(pid[i], SIGUSR1); //wake children up
+	}
 
 	//suspend each child process from parent process
-	/*for (i = 0; i < nprocesses; i++)
+	for (i = 0; i < nprocesses; i++)
 		kill(pid[i], SIGSTOP);
 
 	//send continue signal to each child process for them to resume
 	for (i = 0; i < nprocesses; i++)
-		kill(pid[i], SIGCONT);*/
+		kill(pid[i], SIGCONT);
 
 	//wait for each child process to terminate
 	for (i = 0; i < nprocesses; i++)
