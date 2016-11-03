@@ -31,6 +31,7 @@ void sig_handler(int sig) {
 	//set marks
 	ptrMngr->index = 0;	
 	ptrMngr->count = ptrMngr->nprocessors;
+
 	}
 
 	//handle rest of process scheduling
@@ -44,6 +45,7 @@ void sig_handler(int sig) {
 
 			if (ptrMngr->index == ptrMngr->nprocesses) /*wrap around back to 0 index when at end*/
 				ptrMngr->index = 0;
+
 		}
 
 		//loop through nprocessor times CONTINUE children processes 
@@ -74,12 +76,10 @@ void reap_zombies(int sig) {
 
 int main(int argc, char *argv[]) {
 
-	char *p, *command[num_args];
+	char *p, *buff, *buff2, *buff3, *buff4, *command[num_args];
 	struct timeval start, stop;
 	sigset_t sigSet;
 	struct itimerval itimer;
-
-	char *testcmd[] = { "./test", NULL };
 
 	ptrMngr = (procMngr*) malloc(sizeof(ptrMngr));
 
@@ -94,36 +94,67 @@ int main(int argc, char *argv[]) {
 	//set SIGCHLD for handler to reap
 	signal(SIGCHLD, &reap_zombies);
 
-
-
 	//fetch environment variables TH_NPROCESSES and TH_NPROCESSORS
 	if ((p = getenv("TH_NPROCESSES")) != NULL)
 		ptrMngr->nprocesses = atoi(p);
 	if ((p = getenv("TH_NPROCESSORS")) != NULL)
 		ptrMngr->nprocessors = atoi(p);
 
+	//check and acquire cmdline arguement commands
 	int a;
-	for (a = 0; a < argc; a++) {
+	for (a = 1; a < argc; a++) {
+		if (argv[a][0] == '-' && argv[a][11] == 's' && argv[a][13] != '\0')
+			buff = p1strdup(argv[a]); //first cmd
 
+		if (argv[a][0] == '-' && argv[a][11] == 'r' && argv[a][14] != '\0')
+			buff2 = p1strdup(argv[a]); //second cmd
+
+		if (argv[a][0] == '-' && argv[a][8] == 'd' && argv[a][10] != '\0')
+			buff3 = p1strdup(argv[a]); //third cmd
+		}
+		//cut off --nprocesses from nprocesses int
+		int found = 0;
+		for (buff;*buff != '\0'; ++buff) {
+			if (found) {
+				ptrMngr->nprocesses = p1atoi(p1strdup(buff));
+				break;
+			}
+			if (buff[0] == '=')
+				found = 1;
+		}
+		//cut off --nprocessors from nprocessors int
+		int found2 = 0;
+		for (buff2;*buff2 != '\0'; ++buff2) {	
+			if (found2) {
+				ptrMngr->nprocessors = p1atoi(p1strdup(buff2));
+				break;
+			}
+			if (buff2[0] == '=')
+				found2 = 1;
+		}
+		//cut off --command= from command vector
+		int found3 = 0;
+		for (buff3;*buff3 != '\0'; ++buff3) {	
+			if (found3) {
+				buff4 = p1strdup(buff3);
+				break;
+			}
+			if (buff3[0] == '=')
+				found3 = 1;
+		}
+
+
+	
+	//fill command vector for execvp()
+	char cmds[100];
+	int m = 0;
+	int n = 0;
+	while((m = p1getword(buff4, m, cmds)) != -1) {
+		command[n] = p1strdup(cmds);
+		n++;
 	}
-	//override variables with arguements if applicable
-	/*if (argc == 4 ) { 
-		if (argv[1][0] == '-' && argv[1][1] == '-')
-			ptrMngr->nprocesses = atoi(&argv[1][2]);
-		if (argv[2][0] == '-' && argv[2][1] == '-')
-			ptrMngr->nprocessors = atoi(&argv[2][2]);
-		command[0] = p1strdup(argv[3]);	/*fetch command from argv[3]*/
-	}
-	//no nprocesses/nprocessors parameter defined
-	else if (argc < 3) {
-		command[0] = p1strdup(argv[1]);	/*fetch command from argv[1]*/
-	}
-	else {
-		printf("ERROR: invalid set of arguements\n");
-		return 0;
-	}
-	*/
-	/*******Add error handling for variations of input for args*******/
+	command[n] = NULL; //last element = NULL to end vector
+
 
 	//alloc array of process id's
 	ptrMngr->pid = (pid_t*) malloc(sizeof(pid_t) * ptrMngr->nprocesses);
@@ -131,7 +162,7 @@ int main(int argc, char *argv[]) {
 	//set process count for parent process to wait
 	pcount = ptrMngr->nprocesses;
 
-	//child process creation loop
+	//CHILD PROCESS CREATION LOOP
 	int i;
 	for (i = 0; i < ptrMngr->nprocesses; i++) {
 		ptrMngr->pid[i] = fork();
@@ -142,7 +173,7 @@ int main(int argc, char *argv[]) {
 			sigwait(&sigSet, &sig); /*suspend child proc til signal*/
 			if (sig == SIGUSR1) {  /*when SIGUSR1 is received*/
 				kill(getpid(), SIGSTOP); //pause for scheduler
-				execvp(testcmd[0], testcmd); }
+				execvp(command[0], command); }
 			}
 	} 
 
@@ -193,9 +224,9 @@ int main(int argc, char *argv[]) {
 	p1putstr(1, "sec\n");
 
 	//free memory
-	free(command[0]);
-	free(ptrMngr->pid);
-	free(ptrMngr);
+	//free(command[0]);
+	//free(ptrMngr->pid);
+	//free(ptrMngr);
 
 	return 0;
 }

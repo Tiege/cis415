@@ -6,7 +6,7 @@
 #include "p1fxns.h"
 int main() {
 int n;
-for (n; n < 1000000000; n++)
+for (n; n < 10000000; n++)
 	;
 printf("POO\n");
 	return 0;

@@ -22,6 +22,7 @@ static pcount = 0;
 ********************************************************************/
 void sig_handler(int sig) {
 
+
 	int i;
 	//first set of processes initiated
 	if (sig == SIGUSR2) {
@@ -39,6 +40,22 @@ void sig_handler(int sig) {
 
 		//loop through nprocessor times STOP children processes 
 		for (i = 0; i < ptrMngr->nprocessors; i++) {
+
+	
+	/***ATTEMPT AT /PROC ANALYSIS***Every quantum = 250ms***/
+	int f;
+	char fuff[1024];
+	char tuff[1024];
+	char biff[7];
+	char fpath[500] = "/proc/";
+	p1itoa(ptrMngr->pid[i], biff);
+	p1strcat(fpath, biff);
+	p1strcat(fpath, "/status");
+	//printf("%s\n", fpath);  fpath = correct path 'proc/PID/status'
+	f = open("fpath", "r");
+	p1getline(f, fuff, 128);
+	p1putstr(1, fuff);  //displays encrypted characters for some reason :(
+
 
 			kill(ptrMngr->pid[ptrMngr->index], SIGSTOP);
 			ptrMngr->index++;  //increment mark
