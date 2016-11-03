@@ -1,3 +1,10 @@
+/***TREVOR JONES *** PROJECT 1 *** THV(3) *** CIS 415*******
+*This source file is my own original work. This is a process scheduler using
+*a round robin scheme. The program reads arguements from the cmdline then
+* simulates processes being scheduled and executed. It takes in 'nprocesses',
+* 'nprocessors', and 'command'. Children processes are made for each process
+and execute the given command. The parent program waits for all children to terminate before exiting.***********************************/
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -14,8 +21,8 @@ typedef struct processManager {
 } procMngr;
 
 static procMngr *ptrMngr;
-static pcount = 0;
-
+static int pcount = 0;
+pid_t waitpid(pid_t, int*, int);
 /*Main signal handler***********************************************
 *Called when SIGALRM or SIGUSR2 signalled. Initial loop to start first processes.
 *Alternate between two loops of size 'nprocessors', one to stop, next to continue for pid[n]
@@ -63,7 +70,7 @@ void sig_handler(int sig) {
 /*SIGHLD handler, called when a child terminates************
 *when child terminated detected, decriments process counter by 1
 ************************************************************/
-void reap_zombies(int sig) {
+void reap_zombies() {
 
 	pid_t proc;
 	int status;
@@ -73,7 +80,9 @@ void reap_zombies(int sig) {
 		pcount--; /*reap -> decrement process counter*/
 
 }
-
+/*main parent process****************************************
+*this main function sets up our parameters for our process scheduling
+*it reads input args from the cmdline and forks as many children processes using 'command' as specified. If no arguements are given, environment variables are used. The elapsed time is measured and displayed before the parent process exits after each child is terminated.********/
 int main(int argc, char *argv[]) {
 
 	char *p, *buff, *buff2, *buff3, *buff4, *command[num_args];
@@ -114,7 +123,7 @@ int main(int argc, char *argv[]) {
 		}
 		//cut off --nprocesses from nprocesses int
 		int found = 0;
-		for (buff;*buff != '\0'; ++buff) {
+		for (;*buff != '\0'; ++buff) {
 			if (found) {
 				ptrMngr->nprocesses = p1atoi(p1strdup(buff));
 				break;
@@ -124,7 +133,7 @@ int main(int argc, char *argv[]) {
 		}
 		//cut off --nprocessors from nprocessors int
 		int found2 = 0;
-		for (buff2;*buff2 != '\0'; ++buff2) {	
+		for (;*buff2 != '\0'; ++buff2) {	
 			if (found2) {
 				ptrMngr->nprocessors = p1atoi(p1strdup(buff2));
 				break;
@@ -134,7 +143,7 @@ int main(int argc, char *argv[]) {
 		}
 		//cut off --command= from command vector
 		int found3 = 0;
-		for (buff3;*buff3 != '\0'; ++buff3) {	
+		for (;*buff3 != '\0'; ++buff3) {	
 			if (found3) {
 				buff4 = p1strdup(buff3);
 				break;

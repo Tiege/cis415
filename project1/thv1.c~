@@ -1,3 +1,5 @@
+/***TREVOR JONES *** PROJECT 1 *** THV(1) *** CIS 415*******
+*This source file is my own original work. This is a process scheduler simply starting child processes and waiting for them to exit before terminating as the parent.***********************************/
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -6,10 +8,12 @@
 
 #define num_args 10
 
+int wait(int);
+
 int main(int argc, char *argv[]) {
 
 	int nprocesses, nprocessors;
-	char *p, *command[num_args];
+	char *p, *buff, *buff2, *buff3, *buff4, *command[num_args];
 	pid_t pid[1024];
 	struct timeval start, stop;
 
@@ -20,24 +24,60 @@ int main(int argc, char *argv[]) {
 	if ((p = getenv("TH_NPROCESSORS")) != NULL)
 		nprocessors = atoi(p);
 
-	//override variables with arguements if applicable
-	if (argc == 4 ) { 
-		if (argv[1][0] == '-' && argv[1][1] == '-')
-			nprocesses = atoi(&argv[1][2]);
-		if (argv[2][0] == '-' && argv[2][1] == '-')
-			nprocessors = atoi(&argv[2][2]);
-		command[0] = p1strdup(argv[3]);	/*fetch command from argv[3]*/
-	}
-	//no nprocesses/nprocessors parameter defined
-	else if (argc < 3) {
-		command[0] = p1strdup(argv[1]);	/*fetch command from argv[1]*/
-	}
-	else {
-		printf("ERROR: invalid set of arguements\n");
-		return 0;
-	}
+	//check and acquire cmdline arguement commands
+	int a;
+	for (a = 1; a < argc; a++) {
+		if (argv[a][0] == '-' && argv[a][11] == 's' && argv[a][13] != '\0')
+			buff = p1strdup(argv[a]); //first cmd
 
-	/*******Add error handling for variations of input for args*******/
+		if (argv[a][0] == '-' && argv[a][11] == 'r' && argv[a][14] != '\0')
+			buff2 = p1strdup(argv[a]); //second cmd
+
+		if (argv[a][0] == '-' && argv[a][8] == 'd' && argv[a][10] != '\0')
+			buff3 = p1strdup(argv[a]); //third cmd
+		}
+		//cut off --nprocesses from nprocesses int
+		int found = 0;
+		for (;*buff != '\0'; ++buff) {
+			if (found) {
+				nprocesses = p1atoi(p1strdup(buff));
+				break;
+			}
+			if (buff[0] == '=')
+				found = 1;
+		}
+		//cut off --nprocessors from nprocessors int
+		int found2 = 0;
+		for (;*buff2 != '\0'; ++buff2) {	
+			if (found2) {
+				nprocessors = p1atoi(p1strdup(buff2));
+				break;
+			}
+			if (buff2[0] == '=')
+				found2 = 1;
+		}
+		//cut off --command= from command vector
+		int found3 = 0;
+		for (;*buff3 != '\0'; ++buff3) {	
+			if (found3) {
+				buff4 = p1strdup(buff3);
+				break;
+			}
+			if (buff3[0] == '=')
+				found3 = 1;
+		}
+
+
+	
+	//fill command vector for execvp()
+	char cmds[100];
+	int m = 0;
+	int n = 0;
+	while((m = p1getword(buff4, m, cmds)) != -1) {
+		command[n] = p1strdup(cmds);
+		n++;
+	}
+	command[n] = NULL; //last element = NULL to end vector
 
 	//start timer
 	//start = clock();

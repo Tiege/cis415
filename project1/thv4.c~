@@ -1,3 +1,6 @@
+/***TREVOR JONES *** PROJECT 1 *** THV(4) *** CIS 415*******
+*This source file is my own original work. This is a process scheduler using
+*a round robin scheme. Essentially same source file as thv3 however I attempted, briefly, the /proc analysis displays. However, I was unsuccessful in displaying useful information.***********************************/
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -14,7 +17,8 @@ typedef struct processManager {
 } procMngr;
 
 static procMngr *ptrMngr;
-static pcount = 0;
+static int pcount = 0;
+pid_t waitpid(pid_t, int*, int);
 
 /*Main signal handler***********************************************
 *Called when SIGALRM or SIGUSR2 signalled. Initial loop to start first processes.
@@ -42,10 +46,9 @@ void sig_handler(int sig) {
 		for (i = 0; i < ptrMngr->nprocessors; i++) {
 
 	
-	/***ATTEMPT AT /PROC ANALYSIS***Every quantum = 250ms***/
+	/***ATTEMPT AT /PROC ANALYSIS***Every quantum = 250ms***
 	int f;
 	char fuff[1024];
-	char tuff[1024];
 	char biff[7];
 	char fpath[500] = "/proc/";
 	p1itoa(ptrMngr->pid[i], biff);
@@ -54,7 +57,7 @@ void sig_handler(int sig) {
 	//printf("%s\n", fpath);  fpath = correct path 'proc/PID/status'
 	f = open("fpath", "r");
 	p1getline(f, fuff, 128);
-	p1putstr(1, fuff);  //displays encrypted characters for some reason :(
+	p1putstr(1, fuff);  *///displays encrypted characters for some reason :(
 
 
 			kill(ptrMngr->pid[ptrMngr->index], SIGSTOP);
@@ -80,7 +83,7 @@ void sig_handler(int sig) {
 /*SIGHLD handler, called when a child terminates************
 *when child terminated detected, decriments process counter by 1
 ************************************************************/
-void reap_zombies(int sig) {
+void reap_zombies() {
 
 	pid_t proc;
 	int status;
@@ -131,7 +134,7 @@ int main(int argc, char *argv[]) {
 		}
 		//cut off --nprocesses from nprocesses int
 		int found = 0;
-		for (buff;*buff != '\0'; ++buff) {
+		for (;*buff != '\0'; ++buff) {
 			if (found) {
 				ptrMngr->nprocesses = p1atoi(p1strdup(buff));
 				break;
@@ -141,7 +144,7 @@ int main(int argc, char *argv[]) {
 		}
 		//cut off --nprocessors from nprocessors int
 		int found2 = 0;
-		for (buff2;*buff2 != '\0'; ++buff2) {	
+		for (;*buff2 != '\0'; ++buff2) {	
 			if (found2) {
 				ptrMngr->nprocessors = p1atoi(p1strdup(buff2));
 				break;
@@ -151,7 +154,7 @@ int main(int argc, char *argv[]) {
 		}
 		//cut off --command= from command vector
 		int found3 = 0;
-		for (buff3;*buff3 != '\0'; ++buff3) {	
+		for (;*buff3 != '\0'; ++buff3) {	
 			if (found3) {
 				buff4 = p1strdup(buff3);
 				break;
