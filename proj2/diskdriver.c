@@ -1,3 +1,7 @@
+/***TREVOR JONES***CIS 415***PROJECT 2*******************
+The implementation of methods in this file are my original work. This code is animplementation of a diskdriver to bridge requests between X number of applications to read/write to the disk and the corresponding DiskDevice. The DiskDevice can only read and write one request at a time and may be slow in doing so while the requesting calls must return immediately to continue work. This results in adding a BoundedBuffer to queue the read/write requests to give the DiskDevice enough time to properly siphon through requests without impeding the calling requestapplications.
+******************NOT COMPLETE*****************************
+**********************************************************/
 #include <pthread.h>
 #include <stdio.h>
 #include "sectordescriptor.h"
@@ -10,63 +14,73 @@
 #include "voucher.h"
 #include "BoundedBuffer.h"
 
+#define PROC_THREAD_MAX 20
+
+/*******************GLOBAL VARIABLES****************************/
 //global buffers shared between disk device and application threads
 BoundedBuffer *rbuff, *wbuff;
 
-Block sec;
-
-//semafores
+//semaphores used to keep diskdriver threads idle
 int writeSEM, readSEM;
 
+//voucher data structure with flag for read or write 
 struct voucher {
-	int val;
+	int readORwrite; // Read/Write flag: 0 = write, 1 = read
 };
 
-struct voucher vou[10];
+//array of vouchers for passing pointers to vouchers to fake applications
+//size: should not exceed MAX calls = 20 = 10 x 2 (10 reads, 10 writes)
+//with corresponding index variable
+Voucher va[PROC_THREAD_MAX];
+static int index = 0;
 
-int buffer[10];
+//mutex lock for critical sections; initialized
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
-
+/*****writeDisk/readDisk(DiskDevice)*********************
+*The threads that run the writing/reading portion of the DiskDriver.
+*Uses semaphores to remain idle or perform read/write
+*********************************************************/
 void* writeDisk(void* arg) {
+	
+	while(1) {			//loop keeps driver idle
 
-		while (1) {
-		if (writeSEM > 0) {
+		if ( writeSEM > 0 ) {	//check semaphore
+
 		SectorDescriptor *wSD;
-
 		if(nonblockingReadBB(wbuff, &wSD) == 0)
-			wSD = (SectorDescriptor*) blockingReadBB(wbuff);
+			wSD = blockingReadBB(wbuff);   //read SD from wbuffer
 			
+		printf("DRIVER WRITE: APPLICATION = %u SECTOR = %u\n", 
+		sector_descriptor_get_pid(wSD), 
+		sector_descriptor_get_block(wSD));
 
-		printf("[DRIVER WRITE:%u\n", sector_descriptor_get_pid(wSD));
-		
-		write_sector(arg, wSD);
-		writeSEM--;
+		write_sector(arg, wSD); //write to disk using 
+		writeSEM--; 		//decrement semaphore
 		}
-		}
-	
+	}
 	return NULL;
 }
-
 void* readDisk(void* arg) {
-
-		while (1) {
-		if (readSEM > 0) {
-		SectorDescriptor *rSD;
-
-		if(nonblockingReadBB(rbuff, &rSD) == 0)
-			rSD = blockingReadBB(rbuff);
-
-		printf("[DRIVER READ:%u\n", sector_descriptor_get_pid(rSD));
-		
-
-		read_sector(arg, rSD);
-		readSEM--;
-		}
-		}
 	
+	while (1) {			//loop keeps driver idle
+		if ( readSEM > 0 ) {	//check semaphore
+
+		SectorDescriptor *rSD;
+		if(nonblockingReadBB(rbuff, &rSD) == 0)
+			rSD = blockingReadBB(rbuff);  //read SD from rbuffer
+
+		printf("DRIVER READ: APPLICATION = %u SECTOR = %u\n", 
+		sector_descriptor_get_pid(rSD), 
+		sector_descriptor_get_block(rSD));
+
+		read_sector(arg, rSD);	//read from disk using SD
+
+		readSEM--;		//decrement semaphore
+		}
+	}
 	return NULL;
 }
-
 
 
 /*
@@ -90,29 +104,28 @@ void init_disk_driver(DiskDevice *dd, void *mem_start, unsigned long mem_length,
 		
 	//create FSDS
 	tempFSDS = create_fsds();
+
 	//populate FSDS with sector descriptors using mem_start and mem_len
 	create_free_sector_descriptors(tempFSDS, mem_start, mem_length);
 
 	//create bounded buffer: one for read, one for write
-	rbuff = createBB(500);
-	wbuff = createBB(500);
+	rbuff = createBB(50);
+	wbuff = createBB(50);
 
-	writeSEM = 0;
+	//initialize semaphores
 	readSEM = 0;
+	writeSEM = 0;
 
-	//create threads
+	//create threads for reading and writing
 	pthread_t write_thread;
 	pthread_t read_thread;
 
-	pthread_create (&write_thread, NULL, &writeDisk, &dd);
+	//thread calls: passing pointer to DiskDevice
+	pthread_create (&write_thread, NULL, &writeDisk, dd);
 	pthread_create (&read_thread, NULL, &readDisk, &dd);
 
-	
 	//return back FSDS to call
 	*fsds = tempFSDS;
-
-
-
 }
 
 /*
@@ -127,28 +140,47 @@ void init_disk_driver(DiskDevice *dd, void *mem_start, unsigned long mem_length,
  */
 void blocking_write_sector(SectorDescriptor *sd, Voucher **v) {
 
+	pthread_mutex_lock(&lock);		//lock critical section
+
+	*v = &va[index];			//assign thread voucher return
+	va[index].readORwrite = 0;		//set flag: 0 (write)
+	index++;				//increment voucher[index]
+
+	if ( index == PROC_THREAD_MAX )		//reset index if exceeds MAX
+		index = 0;
+
+	pthread_mutex_unlock(&lock);		//unlock critical section
 	
-	//Voucher *result = NULL;
 
-	blockingWriteBB(wbuff, sd); //send sd to buffer
+	blockingWriteBB(wbuff, sd); 		//send sd to buffer
 
-	
-	writeSEM++;
-
+	writeSEM++;				//increment write semaphore
 
 }
 
 int nonblocking_write_sector(SectorDescriptor *sd, Voucher **v) {
 
+
+	pthread_mutex_lock(&lock);		//lock critical section
+
+	*v = &va[index];			//assign thread voucher return
+	va[index].readORwrite = 0;		//set flag: 0 (write)
+	index++;				//increment voucher[index]
+
+	if ( index == PROC_THREAD_MAX )		//reset index if exceeds MAX
+		index = 0;
+
+	pthread_mutex_unlock(&lock);		//unlock critical section
 	
-	Voucher *result = NULL;
+
+	blockingWriteBB(wbuff, sd); 		//send sd to buffer
+
+	writeSEM++;				//increment semaphore
 
 	int value = nonblockingWriteBB(wbuff, sd); //send sd to buffer
-	//*v = result;
-
-	if ( value != 0)
+	
+	if( value != 0)		//only increment if successful write to buffer
 		writeSEM++;
-
 
 	return value;
 
@@ -166,31 +198,44 @@ int nonblocking_write_sector(SectorDescriptor *sd, Voucher **v) {
  */
 void blocking_read_sector(SectorDescriptor *sd, Voucher **v) {
 
+	pthread_mutex_lock(&lock);		//lock critical section
 
-	Voucher *result = NULL;
+	*v = &va[index];			//assign thread voucher return
+	va[index].readORwrite = 1;		//set flag: 1 (read)
+	index++;				//increment voucher[index]
 
-	blockingWriteBB(rbuff, sd); //send sd to buffer
-	readSEM++;
+	if ( index == PROC_THREAD_MAX )		//reset index if exceeds MAX
+		index = 0;
 
-	//result->val = 1;
+	pthread_mutex_unlock(&lock);		//unlock critical section
 
-	//*v = result;
 
+	blockingWriteBB(rbuff, sd);		 //send sd to buffer
+
+	readSEM++;				//increment read semaphore
+	
 }
+
 int nonblocking_read_sector(SectorDescriptor *sd, Voucher **v) {
 
-	//printf("READ\n");
+	
+	pthread_mutex_lock(&lock);		//lock critical section
 
-	Voucher *result = NULL;
+	*v = &va[index];			//assign thread voucher return
+	va[index].readORwrite = 1;		//set flag: 1 (read)
+	index++;				//increment voucher[index]
 
-	int value = nonblockingWriteBB(rbuff, sd); //send sd to buffer
+	if ( index == PROC_THREAD_MAX )		//reset index if exceeds MAX
+		index = 0;
 
-	//*v = result;
+	pthread_mutex_unlock(&lock);		//unlock critical section	
 
-	if ( value != 0)
+	int val = nonblockingWriteBB(rbuff, sd); //send sd to buffer
+
+	if( val != 0)		//only increment if successful write to buffer
 		readSEM++;
 
-	return value;
+	return val;
 
 }
 
@@ -202,6 +247,20 @@ int nonblocking_read_sector(SectorDescriptor *sd, Voucher **v) {
  */
 int redeem_voucher(Voucher *v, SectorDescriptor **sd) {
 
-	return 1;
+	int result;
+
+	pthread_mutex_lock(&lock);		//lock critical section
+
+	if (v->readORwrite == 0) {		//if voucher is for write
+		//check if read:SD is still in buffer, return result
+		result = nonblockingReadBB(rbuff, &sd);
+	} else {
+		//else check if write:SD is in buffer, return result
+		result = nonblockingReadBB(wbuff, &sd);
+	}	
+
+	pthread_mutex_unlock(&lock);		//unlock critical section
+
+	return !result;
 }
 
