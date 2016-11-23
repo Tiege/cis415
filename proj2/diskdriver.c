@@ -48,12 +48,12 @@ void* writeDisk(void* arg) {
 		if ( writeSEM > 0 ) {	//check semaphore
 
 		SectorDescriptor *wSD;
-		if(nonblockingReadBB(wbuff, &wSD) == 0)
+		if(nonblockingReadBB(wbuff, (void**)&wSD) == 0)
 			wSD = blockingReadBB(wbuff);   //read SD from wbuffer
 			
 		printf("DRIVER WRITE: APPLICATION = %u SECTOR = %u\n", 
-		sector_descriptor_get_pid(wSD), 
-		sector_descriptor_get_block(wSD));
+		(int)sector_descriptor_get_pid(wSD), 
+		(int)sector_descriptor_get_block(wSD));
 
 		write_sector(arg, wSD); //write to disk using 
 		writeSEM--; 		//decrement semaphore
@@ -67,12 +67,12 @@ void* readDisk(void* arg) {
 		if ( readSEM > 0 ) {	//check semaphore
 
 		SectorDescriptor *rSD;
-		if(nonblockingReadBB(rbuff, &rSD) == 0)
+		if(nonblockingReadBB(rbuff, (void**)&rSD) == 0)
 			rSD = blockingReadBB(rbuff);  //read SD from rbuffer
 
 		printf("DRIVER READ: APPLICATION = %u SECTOR = %u\n", 
-		sector_descriptor_get_pid(rSD), 
-		sector_descriptor_get_block(rSD));
+		(int)sector_descriptor_get_pid(rSD), 
+		(int)sector_descriptor_get_block(rSD));
 
 		read_sector(arg, rSD);	//read from disk using SD
 
@@ -253,10 +253,10 @@ int redeem_voucher(Voucher *v, SectorDescriptor **sd) {
 
 	if (v->readORwrite == 0) {		//if voucher is for write
 		//check if read:SD is still in buffer, return result
-		result = nonblockingReadBB(rbuff, &sd);
+		result = nonblockingReadBB(rbuff, (void**)&sd);
 	} else {
 		//else check if write:SD is in buffer, return result
-		result = nonblockingReadBB(wbuff, &sd);
+		result = nonblockingReadBB(wbuff, (void**)&sd);
 	}	
 
 	pthread_mutex_unlock(&lock);		//unlock critical section
